@@ -9,8 +9,7 @@ import numpy as np
 class BasePlotter:
     start_time = time.time_ns()
 
-    def __init__(self, filename_, ax_, regexp, x_last_=90):
-        self.filename = filename_
+    def __init__(self, ax_, regexp, x_last_=90):
         self.ax = ax_
         self.x_last = x_last_
         self.regexp = regexp
@@ -18,19 +17,8 @@ class BasePlotter:
         self.file_path = ''
         self.ts = np.array([])
 
-        self.fd = os.open(filename_, os.O_RDONLY | os.O_NONBLOCK)
-        os.lseek(self.fd, 0, os.SEEK_END)
         self.text_residual = b''
         self.line_counter = 0
-
-    def read_lines(self):
-        lines = (self.text_residual + os.read(self.fd, 40960)).split(b'\n')
-        new_residual = lines.pop()
-        if new_residual.endswith(b'\n'):
-            lines.append(new_residual)
-            new_residual = b''
-        self.text_residual = new_residual
-        return [line.decode('utf-8') for line in lines]
 
     def process_lines(self, log_strings, decimate=1):
         d = {}
@@ -90,8 +78,7 @@ class JittPlotter(BasePlotter):
     def __init__(self, ax_):
         regexp = re.compile(
             '^[a-z],(?P<ts>[\d.]*),(?P<stream_ts>[\d.]*),(?P<delta_ms>[\d.]*),(?P<jitter_max>[\d.]*),(?P<jitter_min>[\d.]*)$')
-        self.file_path = "/tmp/jitt.log"
-        super().__init__(self.file_path, ax_, regexp)
+        super().__init__(ax_, regexp)
 
     def __call__(self, lines):
         # ts, stream ts, delta_ms, jitter_max, jitter_min
@@ -110,8 +97,7 @@ class LatencyPlotter(BasePlotter):
     def __init__(self, ax_):
         regexp = re.compile(
             '^[a-z],(?P<ts>[\d.]*),(?P<niq>[\d.]*),(?P<target>[\d.]*)$')
-        self.file_path = "/tmp/tuner.log"
-        super().__init__(self.file_path, ax_, regexp)
+        super().__init__(ax_, regexp)
 
     def __call__(self, lines):
         # ts, stream ts, delta_ms, jitter_max, jitter_min
@@ -130,9 +116,8 @@ class FreqEstimatorPlotter(BasePlotter):
         regexp = re.compile(
             '^[a-z],(?P<ts>[\d.]*),(?P<filtered>[\d.]*),(?P<target>[\d.]*),(?P<p>[-e\d.]*),(?P<i>[-e\d.]*)$',
             re.MULTILINE)
-        self.file_path = "/tmp/fe.log"
         self.accum_ax = ax_.twinx()
-        super().__init__(self.file_path, ax_, regexp)
+        super().__init__(ax_, regexp)
 
     def __call__(self, lines):
         # ts, stream ts, delta_ms, jitter_max, jitter_min
@@ -146,3 +131,23 @@ class FreqEstimatorPlotter(BasePlotter):
                   clear=True)
         self.plot(self.ts, [{"y": self.measurements["p"], "label": "P", "fmt": "k-"},
                             {"y": self.measurements["i"], "label": "I", "fmt": "r-"}], ax=self.accum_ax)
+
+class RTTPlotter(BasePlotter):
+    def __init__(self, ax_):
+        regexp = re.compile(
+            '^[a-z],(?P<ts>[\d.]*),(?P<rtt>[\d.]*),(?P<ts_offset>-?[\d.]*)$')
+        self.ts_ax = ax_.twinx()
+        super().__init__(ax_, regexp)
+
+    def __call__(self, lines):
+        # ts, stream ts, delta_ms, jitter_max, jitter_min
+        self.process_lines(lines)
+
+        if self.measurements == {}:
+            return
+
+        self.plot(self.ts, [
+            {"y": self.measurements["rtt"] / 1e9 * 1e3, "label": "rtt ms", "fmt": "k-"}
+            ], ax=self.ax)
+        self.plot(self.ts, [
+            {"y": self.measurements["ts_offset"] / 1e9 * 1e3, "label": "ts offset ms", "fmt": "r-"}], ax=self.ts_ax)

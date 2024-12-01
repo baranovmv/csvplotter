@@ -6,13 +6,13 @@ import time
 
 import matplotlib.pyplot as plt
 
-from logplotters import JittPlotter, LatencyPlotter, FreqEstimatorPlotter
+from logplotters import JittPlotter, LatencyPlotter, FreqEstimatorPlotter, RTTPlotter
 
 if __name__ == '__main__':
     fig = plt.figure()
-    ax1 = fig.add_subplot(311)
-    ax2 = fig.add_subplot(312)
-    ax3 = fig.add_subplot(313)
+    # ax1 = fig.add_subplot(311)
+    # ax2 = fig.add_subplot(312)
+    ax3 = fig.add_subplot(111)
 
     fd = os.open(sys.argv[1], os.O_RDONLY | os.O_NONBLOCK)
     os.lseek(fd, 0, os.SEEK_END)
@@ -20,9 +20,10 @@ if __name__ == '__main__':
     line_counter = 0
 
     # files = [FreqEstimatorPlotter(ax3)]
-    plotters = {'z': [FreqEstimatorPlotter(ax3), 0],
-                'x': [LatencyPlotter(ax2), 0],
-                'm': [JittPlotter(ax1), 0]}
+    plotters = {#'f': [FreqEstimatorPlotter(ax3), 0],
+                # 't': [LatencyPlotter(ax2), 0],
+                # 'm': [JittPlotter(ax1), 0],
+                'r': [RTTPlotter(ax3), 0]}
     time_start = time.time_ns()
     time_print = time_start
     unrecognized_processor_cntr = 0
