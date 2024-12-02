@@ -135,8 +135,10 @@ class FreqEstimatorPlotter(BasePlotter):
 class RTTPlotter(BasePlotter):
     def __init__(self, ax_):
         regexp = re.compile(
-            '^[a-z],(?P<ts>[\d.]*),(?P<rtt>[\d.]*),(?P<ts_offset>-?[\d.]*)$')
+            '^[a-z],(?P<ts>[\d.]*),(?P<rtt>[\d.]*),(?P<ts_offset>-?[\d.]*),(?P<t1>[\d.]*),(?P<t2>[\d.]*),(?P<t3>[\d.]*),(?P<t4>[\d.]*)$')
         self.ts_ax = ax_.twinx()
+
+        self.cntr = 0
         super().__init__(ax_, regexp)
 
     def __call__(self, lines):
